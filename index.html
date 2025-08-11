@@ -1,1 +1,460 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的诗集</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/turn.js/3/turn.min.js"></script>
+    <!-- 这个文件已经准备好可以直接上传到GitHub -->
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: '楷体', 'KaiTi', serif;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
 
+        .book-container {
+            position: relative;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            border-radius: 10px;
+        }
+
+        #flipbook {
+            width: 800px;
+            height: 600px;
+            margin: 0 auto;
+        }
+
+        #flipbook .page {
+            width: 400px;
+            height: 600px;
+            background: linear-gradient(to bottom, #fefefe, #f8f8f8);
+            border: 1px solid #ddd;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 40px;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        .cover {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%) !important;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cover::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="40" r="1.5" fill="rgba(255,255,255,0.1)"/><circle cx="40" cy="80" r="1" fill="rgba(255,255,255,0.1)"/></svg>');
+        }
+
+        .cover h1 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            z-index: 1;
+            position: relative;
+        }
+
+        .cover .author {
+            font-size: 1.2em;
+            opacity: 0.8;
+            z-index: 1;
+            position: relative;
+        }
+
+        .poem-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 30px;
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+
+        .poem-content {
+            line-height: 2.2;
+            font-size: 1.1em;
+            color: #34495e;
+            max-width: 300px;
+        }
+
+        .poem-line {
+            margin-bottom: 15px;
+            opacity: 0;
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+
+        .poem-line:nth-child(1) { animation-delay: 0.1s; }
+        .poem-line:nth-child(2) { animation-delay: 0.3s; }
+        .poem-line:nth-child(3) { animation-delay: 0.5s; }
+        .poem-line:nth-child(4) { animation-delay: 0.7s; }
+        .poem-line:nth-child(5) { animation-delay: 0.9s; }
+        .poem-line:nth-child(6) { animation-delay: 1.1s; }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .page-number {
+            position: absolute;
+            bottom: 20px;
+            font-size: 0.9em;
+            color: #7f8c8d;
+        }
+
+        .left-page .page-number {
+            left: 20px;
+        }
+
+        .right-page .page-number {
+            right: 20px;
+        }
+
+        .table-of-contents {
+            text-align: left;
+            max-width: 300px;
+        }
+
+        .table-of-contents h2 {
+            text-align: center;
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+            margin-bottom: 30px;
+        }
+
+        .toc-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 1px dotted #bdc3c7;
+        }
+
+        .navigation-hint {
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.9em;
+            color: rgba(255,255,255,0.7);
+            text-align: center;
+        }
+
+        .back-cover {
+            background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%) !important;
+            color: white;
+            font-style: italic;
+        }
+
+        .back-cover p {
+            line-height: 1.8;
+            max-width: 280px;
+            opacity: 0.9;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 900px) {
+            #flipbook {
+                width: 600px;
+                height: 450px;
+            }
+            #flipbook .page {
+                width: 300px;
+                height: 450px;
+                padding: 30px;
+            }
+            .cover h1 {
+                font-size: 2em;
+            }
+        }
+
+        @media (max-width: 700px) {
+            #flipbook {
+                width: 400px;
+                height: 300px;
+            }
+            #flipbook .page {
+                width: 200px;
+                height: 300px;
+                padding: 20px;
+            }
+            .cover h1 {
+                font-size: 1.5em;
+            }
+            .poem-title {
+                font-size: 1.2em;
+            }
+            .poem-content {
+                font-size: 1em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="book-container">
+        <div id="flipbook">
+            <!-- 封面 -->
+            <div class="page cover">
+                <h1>心境诗集</h1>
+                <div class="author">作者姓名</div>
+                <div class="navigation-hint">
+                    点击页面边缘翻页<br>
+                    或使用键盘方向键
+                </div>
+            </div>
+
+            <!-- 目录页 -->
+            <div class="page left-page">
+                <div class="table-of-contents">
+                    <h2>目录</h2>
+                    <div class="toc-item">
+                        <span>春风吟</span>
+                        <span>3</span>
+                    </div>
+                    <div class="toc-item">
+                        <span>夏日梦</span>
+                        <span>5</span>
+                    </div>
+                    <div class="toc-item">
+                        <span>秋思</span>
+                        <span>7</span>
+                    </div>
+                    <div class="toc-item">
+                        <span>冬雪</span>
+                        <span>9</span>
+                    </div>
+                    <div class="toc-item">
+                        <span>城市夜</span>
+                        <span>11</span>
+                    </div>
+                    <div class="toc-item">
+                        <span>远山</span>
+                        <span>13</span>
+                    </div>
+                </div>
+                <div class="page-number">2</div>
+            </div>
+
+            <!-- 第一首诗 -->
+            <div class="page right-page">
+                <div class="poem-title">春风吟</div>
+                <div class="poem-content">
+                    <div class="poem-line">春风轻抚柳梢头</div>
+                    <div class="poem-line">绿意盎然满枝头</div>
+                    <div class="poem-line">花开花落知时节</div>
+                    <div class="poem-line">人生如梦莫回首</div>
+                    <div class="poem-line"></div>
+                    <div class="poem-line">愿借春风寄我意</div>
+                    <div class="poem-line">千里之外共此时</div>
+                </div>
+                <div class="page-number">3</div>
+            </div>
+
+            <!-- 空白页 -->
+            <div class="page left-page">
+                <div class="page-number">4</div>
+            </div>
+
+            <!-- 第二首诗 -->
+            <div class="page right-page">
+                <div class="poem-title">夏日梦</div>
+                <div class="poem-content">
+                    <div class="poem-line">蝉鸣声声夏日长</div>
+                    <div class="poem-line">绿荫深处觅清凉</div>
+                    <div class="poem-line">午后阳光金灿灿</div>
+                    <div class="poem-line">梦里花开别样香</div>
+                    <div class="poem-line"></div>
+                    <div class="poem-line">时光荏苒如流水</div>
+                    <div class="poem-line">青春岁月最难忘</div>
+                </div>
+                <div class="page-number">5</div>
+            </div>
+
+            <!-- 继续添加更多页面 -->
+            <div class="page left-page">
+                <div class="page-number">6</div>
+            </div>
+
+            <div class="page right-page">
+                <div class="poem-title">秋思</div>
+                <div class="poem-content">
+                    <div class="poem-line">落叶飘零满径香</div>
+                    <div class="poem-line">秋风萧瑟透心凉</div>
+                    <div class="poem-line">登高望远思故乡</div>
+                    <div class="poem-line">一轮明月照我窗</div>
+                    <div class="poem-line"></div>
+                    <div class="poem-line">人生如秋多感慨</div>
+                    <div class="poem-line">岁月如歌情最长</div>
+                </div>
+                <div class="page-number">7</div>
+            </div>
+
+            <div class="page left-page">
+                <div class="page-number">8</div>
+            </div>
+
+            <div class="page right-page">
+                <div class="poem-title">冬雪</div>
+                <div class="poem-content">
+                    <div class="poem-line">雪花纷飞舞天空</div>
+                    <div class="poem-line">银装素裹天地同</div>
+                    <div class="poem-line">梅花独立雪中开</div>
+                    <div class="poem-line">暗香浮动月朦胧</div>
+                    <div class="poem-line"></div>
+                    <div class="poem-line">严冬过后是春天</div>
+                    <div class="poem-line">希望之光永不灭</div>
+                </div>
+                <div class="page-number">9</div>
+            </div>
+
+            <div class="page left-page">
+                <div class="page-number">10</div>
+            </div>
+
+            <div class="page right-page">
+                <div class="poem-title">城市夜</div>
+                <div class="poem-content">
+                    <div class="poem-line">霓虹闪烁夜如昼</div>
+                    <div class="poem-line">车水马龙不停休</div>
+                    <div class="poem-line">高楼大厦入云霄</div>
+                    <div class="poem-line">繁华背后有离愁</div>
+                    <div class="poem-line"></div>
+                    <div class="poem-line">万家灯火照人心</div>
+                    <div class="poem-line">何处才是我归宿</div>
+                </div>
+                <div class="page-number">11</div>
+            </div>
+
+            <div class="page left-page">
+                <div class="page-number">12</div>
+            </div>
+
+            <div class="page right-page">
+                <div class="poem-title">远山</div>
+                <div class="poem-content">
+                    <div class="poem-line">远山如黛入眼帘</div>
+                    <div class="poem-line">云雾缭绕若仙境</div>
+                    <div class="poem-line">青山不老水长流</div>
+                    <div class="poem-line">心随山水自悠然</div>
+                    <div class="poem-line"></div>
+                    <div class="poem-line">登临绝顶一声啸</div>
+                    <div class="poem-line">万里江山尽眼前</div>
+                </div>
+                <div class="page-number">13</div>
+            </div>
+
+            <!-- 添加更多页面到24页 -->
+            <div class="page left-page">
+                <div class="page-number">14</div>
+            </div>
+
+            <div class="page right-page">
+                <div class="page-number">15</div>
+            </div>
+
+            <div class="page left-page">
+                <div class="page-number">16</div>
+            </div>
+
+            <div class="page right-page">
+                <div class="page-number">17</div>
+            </div>
+
+            <div class="page left-page">
+                <div class="page-number">18</div>
+            </div>
+
+            <div class="page right-page">
+                <div class="page-number">19</div>
+            </div>
+
+            <div class="page left-page">
+                <div class="page-number">20</div>
+            </div>
+
+            <div class="page right-page">
+                <div class="page-number">21</div>
+            </div>
+
+            <div class="page left-page">
+                <div class="page-number">22</div>
+            </div>
+
+            <div class="page right-page">
+                <div class="page-number">23</div>
+            </div>
+
+            <!-- 封底 -->
+            <div class="page back-cover">
+                <p>"诗歌是心灵的语言，是情感的载体。在这个快节奏的时代，愿这些简单的文字能够为你带来一丝宁静与思考。"</p>
+                <br>
+                <p>— 感谢您的阅读 —</p>
+                <div class="page-number">24</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            // 初始化 flipbook
+            $("#flipbook").turn({
+                width: 800,
+                height: 600,
+                autoCenter: true,
+                acceleration: true,
+                gradients: true,
+                elevation: 50,
+                display: 'double'
+            });
+
+            // 键盘控制
+            $(document).keydown(function(e) {
+                if (e.keyCode == 37) { // 左箭头
+                    $("#flipbook").turn("previous");
+                } else if (e.keyCode == 39) { // 右箭头
+                    $("#flipbook").turn("next");
+                }
+            });
+
+            // 响应式调整
+            function resizeBook() {
+                var width = $(window).width();
+                if (width <= 700) {
+                    $("#flipbook").turn("size", 400, 300);
+                } else if (width <= 900) {
+                    $("#flipbook").turn("size", 600, 450);
+                } else {
+                    $("#flipbook").turn("size", 800, 600);
+                }
+            }
+
+            $(window).resize(resizeBook);
+            resizeBook();
+        });
+    </script>
+</body>
+</html>
