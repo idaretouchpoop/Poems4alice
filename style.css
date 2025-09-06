@@ -295,3 +295,12 @@ input {
     transform: rotateY(-180deg);
     z-index: 9;
 }
+.front_content, .back_content {
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+  z-index: 10 !important;
+}
